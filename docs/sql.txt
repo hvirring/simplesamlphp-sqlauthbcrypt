@@ -1,11 +1,11 @@
-`sqlauthBcrypt:SQL`
-=============
+sqlauthBcrypt:SQL
+=================
 
 This is an authentication module for [SimpleSAMLphp](http://simplesamlphp.org) to authenticate a user against a SQL database table.
 
 It assumes password hashes and salts are calculated using [bcrypt](http://bcrypt.sourceforge.net/).
 
-The implementation is based heavily on the SimpleSAMLphp module `sqlauth:SQL`.
+The implementation is based heavily on the SimpleSAMLphp module [sqlauth:SQL](http://simplesamlphp.org/docs/1.7/sqlauth:sql).
 
 
 Options
