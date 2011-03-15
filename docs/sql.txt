@@ -8,30 +8,20 @@ Options
 -------
 
 `dsn`
-:   The DSN which should be used to connect to the database server.
-    Check the various database drivers in the [PHP documentation](http://php.net/manual/en/pdo.drivers.php)
-    for a description of the various DSN formats.
+:   The DSN which should be used to connect to the database server. Check the various database drivers in the [PHP documentation](http://php.net/manual/en/pdo.drivers.php) for a description of the various DSN formats.
 
 `username`
 :   The username which should be used when connecting to the database server.
 
 
 `password`
-:   The password which should be used when connecting to the database server.
-    If you are running this locally for development and you are using an empty
-    password, set this to the empty string ('').
+:   The password which should be used when connecting to the database server. If you are running this locally for development and you are using an empty password, set this to the empty string ('').
 
 `query`
-:   The SQL query which should be used to retrieve the user.
-    The parameters :username and :password are available.
-    If the username/password is incorrect, the query should return no rows.
-    The name of the columns in resultset will be used as attribute names.
-    If the query returns multiple rows, they will be merged into the attributes.
-    Duplicate values and NULL values will be removed.
+:   The SQL query which should be used to retrieve the user. The parameters :username and :password are available. If the username/password is incorrect, the query should return no rows. The name of the columns in resultset will be used as attribute names. If the query returns multiple rows, they will be merged into the attributes. Duplicate values and NULL values will be removed.
 
 `pepper`
-:   The pepper string appended to the password before generating the hash.
-    If you are not using a pepper, set this to the empty string ('').
+:   The pepper string appended to the password before generating the hash. If you are not using a pepper, set this to the empty string ('').
 
 `hash_column`
 :   The column storing password hashes.
