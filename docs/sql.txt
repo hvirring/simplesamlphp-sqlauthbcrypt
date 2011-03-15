@@ -1,7 +1,11 @@
 `sqlauthBcrypt:SQL`
 =============
 
-This is an authentication module for authenticating a user against a SQL database. It uses bcrypt for validation of passwords against hashed passwords stored in the database. The implementation is based heavily on sqlauth:SQL.
+This is an authentication module for [SimpleSAMLphp](http://simplesamlphp.org) to authenticate a user against a SQL database table.
+
+It assumes password hashes and salts are calculated using [bcrypt](http://bcrypt.sourceforge.net/).
+
+The implementation is based heavily on the SimpleSAMLphp module `sqlauth:SQL`.
 
 
 Options
@@ -21,7 +25,7 @@ Options
 :   The SQL query which should be used to retrieve the user. The parameters :username and :password are available. If the username/password is incorrect, the query should return no rows. The name of the columns in resultset will be used as attribute names. If the query returns multiple rows, they will be merged into the attributes. Duplicate values and NULL values will be removed.
 
 `pepper`
-:   The pepper string appended to the password before generating the hash. If you are not using a pepper, set this to the empty string ('').
+:   The pepper string appended to passwords before generating the hash. If you are not using a pepper, set this to the empty string ('').
 
 `hash_column`
 :   The column storing password hashes.

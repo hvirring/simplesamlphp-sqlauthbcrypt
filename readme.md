@@ -1,1 +1,1 @@
-docs/sql.txt
+./docs/sql.txt
