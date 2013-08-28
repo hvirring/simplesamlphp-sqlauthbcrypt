@@ -52,13 +52,6 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 	 */
 	private $hash_column;
 
-
-	/**
-	 * The column holding the password salt.
-	 */
-	private $salt_column;
-
-
 	/**
 	 * Constructor for this authentication source.
 	 *
@@ -93,7 +86,6 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 		$this->query = $config['query'];
 		$this->pepper = $config['pepper'];
 		$this->hash_column = $config['hash_column'];
-		$this->salt_column = $config['salt_column'];
 	}
 
 
@@ -184,9 +176,8 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 
 		/* Validate stored password hash (must be in first row of resultset) */
 		$password_hash = $data[0][$this->hash_column];
-		$password_salt = $data[0][$this->salt_column];
 
-		if ($password_hash !== crypt($password.$this->pepper, $password_salt)) {
+		if ($password_hash !== crypt($password.$this->pepper, $password_hash)) {
 		 /* Invalid password */
 		 SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
 			 ': Hash does not match. Wrong password or sqlauthBcrypt is misconfigured.');
@@ -205,8 +196,8 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 					continue;
 				}
 
-				if ($name === $this->hash_column || $name === $this->salt_column) {
-					/* Don't add password hash and salt to attributes */
+				if ($name === $this->hash_column) {
+					/* Don't add password hash to attributes */
 					continue;
 				}
 
