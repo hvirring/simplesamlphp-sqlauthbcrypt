@@ -30,9 +30,6 @@ Options
 `hash_column`
 :   The column storing password hashes.
 
-`salt_column`
-:   The column storing password salts.
-
 
 Examples
 --------
@@ -45,7 +42,6 @@ Example - MySQL server:
       'username' => 'userdb',
       'password' => 'secretpassword',
       'hash_column' => 'password_hash',
-      'salt_column' => 'password_salt'
-      'query' => 'SELECT username AS uid, name AS cn, email AS mail, password_hash, password_salt FROM users WHERE username = :username',
+      'query' => 'SELECT username AS uid, name AS cn, email AS mail, password_hash FROM users WHERE username = :username',
       'pepper' => '0474f00f7823ade7d10d6797b4ceb591672c3440d92537309cedfc383a98209daf6755c043deb92936797cf74859e6924d0b395a0309950be364928188c7cf0f',
     ),
