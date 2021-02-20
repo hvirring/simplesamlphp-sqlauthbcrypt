@@ -136,22 +136,22 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 
         $db = $this->connect();
 
-        $data = $this->getAccountFromDb($db);
+        $accountData = $this->getAccountFromDb($db);
 
         /**
          * if password in db is not bcrypt (does NOT starts with $2y$)
          * AND user provided password is valid THEN
          * UPDATE the db's password to bcrypt.
          */
-        if (isNotBcryptPassword($data[0]['password']) &&
-            hash($this->oldHash, $password) === $data[0]['password']) {
+        if (isNotBcryptPassword($accountData[0]['password']) &&
+            hash($this->oldHash, $password) === $accountData[0]['password']) {
             $this->convertToBcryptPassword($password, $id);
         }
 
         // re-read account from db
-        $data = $this->getAccountFromDb($db);
+        $accountData = $this->getAccountFromDb($db);
         /* Validate stored password hash (must be in first row of resultset) */
-        $dbBcryptPassword = $data[0]['password'];
+        $dbBcryptPassword = $accountData[0]['password'];
 
         if (! password_verify($password, $dbBcryptPassword)) {
          /* Invalid password */
@@ -160,7 +160,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
             throw new SimpleSAML_Error_Error('WRONGUSERPASS');
         }
 
-        $this->extractAndBuildAttributes($data);
+        $this->extractAndBuildAttributes($accountData);
 
         SimpleSAML_Logger::info('sqlauthBcrypt:' . $this->authId .
             ': Attributes: ' . implode(',', array_keys($attributes)));
