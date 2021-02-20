@@ -165,7 +165,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
          *  then build new bcrypt password
         **/
         if (empty($data[0]['hash_password']) &&
-            password_verify($password, $data[0]['password'])
+            hash('256', $password) === $data[0]['password'])
         ) {
             $this->updateBcryptPassword($data[0]['password'], $id);
         }
