@@ -32,6 +32,11 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
      */
     private $password;
 
+    /**
+     * Old hash value - default '256'
+     */
+    private $oldHash = '256';
+
 
     /**
      * The query we should use to retrieve the attributes for the user.
@@ -55,7 +60,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
         parent::__construct($info, $config);
 
         /* Make sure that all required parameters are present. */
-        foreach (array('dsn', 'username', 'password', 'query') as $param) {
+        foreach (array('dsn', 'username', 'password', 'old_hash', 'query') as $param) {
             if (!array_key_exists($param, $config)) {
                 throw new Exception('Missing required attribute \'' . $param .
                     '\' for authentication source ' . $this->authId);
@@ -72,6 +77,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
         $this->dsn = $config['dsn'];
         $this->username = $config['username'];
         $this->password = $config['password'];
+        $this->oldHash = $config['old_hash'];
         $this->query = $config['query'];
     }
 
@@ -130,8 +136,94 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 
         $db = $this->connect();
 
+        $data = $this->getAccountFromDb($db);
+
+        /**
+         * if password in db is not bcrypt (does NOT starts with $2y$)
+         * AND user provided password is valid THEN
+         * UPDATE the db's password to bcrypt.
+         */
+        if (isNotBcryptPassword($data[0]['password']) &&
+            hash($this->oldHash, $password) === $data[0]['password']) {
+            $this->convertToBcryptPassword($password, $id);
+        }
+
+        // re-read account from db
+        $data = $this->getAccountFromDb($db);
+        /* Validate stored password hash (must be in first row of resultset) */
+        $dbBcryptPassword = $data[0]['password'];
+
+        if (! password_verify($password, $dbBcryptPassword)) {
+         /* Invalid password */
+            SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
+                 ': Hash does not match. Wrong password or sqlauthBcrypt is misconfigured.');
+            throw new SimpleSAML_Error_Error('WRONGUSERPASS');
+        }
+
+        $this->extractAndBuildAttributes($data);
+
+        SimpleSAML_Logger::info('sqlauthBcrypt:' . $this->authId .
+            ': Attributes: ' . implode(',', array_keys($attributes)));
+
+        return $attributes;
+    }
+
+    private function convertToBcryptPassword($plainTextPassword, $id) {
+        $bcryptPassword = password_hash($plainTextPassword, PASSWORD_BCRYPT);
         try {
-            $sth = $db->prepare($this->query);
+            $query = "UPDATE users SET password = :bcrypt_password WHERE id = :id";
+            $sth = $db->prepare($query);
+            $sth->execute(['bcrypt_password' => $bcryptPassword, 'id' => $id]);
+        } catch (PDOException $ex) {
+            throw new Exception('sqlauthBcrypt:' . $this->authId .
+            ': - Failed to re-create bcrypt with query: ' . $e->getMessage());
+        }
+    }
+
+    /* Extract attributes. We allow the resultset to consist of multiple rows. Attributes
+     * which are present in more than one row will become multivalued. NULL values and
+     * duplicate values will be skipped. All values will be converted to strings.
+     */
+    private function extractAndBuildAttributes($data) {
+        $attributes = [];
+
+        foreach ($data as $row) {
+            foreach ($row as $name => $value) {
+
+                if ($value === NULL) {
+                    continue;
+                }
+
+                if ($name === 'password') {
+                    /* skip password attributes */
+                    continue;
+                }
+
+                $value = (string)$value;
+
+                if (!array_key_exists($name, $attributes)) {
+                    $attributes[$name] = array();
+                }
+
+                if (in_array($value, $attributes[$name], TRUE)) {
+                    /* Value already exists in attribute. */
+                    continue;
+                }
+
+                $attributes[$name][] = $value;
+            }
+        }
+
+        return $attributes;
+    }
+
+    private function isNotBcryptPassword($password) {
+        return substr($password, 0, 4) !== "$2y$";
+    }
+
+    private function getAccountFromDb($dbConnection) {
+        try {
+            $sth = $dbConnection->prepare($this->query);
         } catch (PDOException $e) {
             throw new Exception('sqlauthBcrypt:' . $this->authId .
                 ': - Failed to prepare query: ' . $e->getMessage());
@@ -161,79 +253,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
             throw new SimpleSAML_Error_Error('WRONGUSERPASS');
         }
 
-        /** If brcypt password is empty and sha256 password valid
-         *  then build new bcrypt password
-        **/
-        if (empty($data[0]['hash_password']) &&
-            hash('256', $password) === $data[0]['password'])
-        ) {
-            $this->updateBcryptPassword($data[0]['password'], $id);
-        }
-        /* Validate stored password hash (must be in first row of resultset) */
-        $dbBcryptPassword = $data[0]['hash_password'];
-
-        if (! password_verify($password, $dbBcryptPassword)) {
-         /* Invalid password */
-            SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
-                 ': Hash does not match. Wrong password or sqlauthBcrypt is misconfigured.');
-            throw new SimpleSAML_Error_Error('WRONGUSERPASS');
-        }
-
-        $this->extractAndBuildAttributes($data);
-
-        SimpleSAML_Logger::info('sqlauthBcrypt:' . $this->authId .
-            ': Attributes: ' . implode(',', array_keys($attributes)));
-
-        return $attributes;
-    }
-
-    private function updateBcryptPassword($plainTextPassword, $id) {
-        $bcryptPassword = password_hash($plainTextPassword, PASSWORD_BCRYPT);
-        try {
-            $query = "UPDATE users SET hash_password = :bcrypt_password WHERE id = :id";
-            $sth = $db->prepare($query);
-            $sth->execute(['bcrypt_password' => $bcryptPassword, 'id' => $id]);
-        } catch (PDOException $ex) {
-            throw new Exception('sqlauthBcrypt:' . $this->authId .
-            ': - Failed to re-create bcrypt with query: ' . $e->getMessage());
-        }
-    }
-
-    /* Extract attributes. We allow the resultset to consist of multiple rows. Attributes
-     * which are present in more than one row will become multivalued. NULL values and
-     * duplicate values will be skipped. All values will be converted to strings.
-     */
-    private function extractAndBuildAttributes($data) {
-        $attributes = [];
-
-        foreach ($data as $row) {
-            foreach ($row as $name => $value) {
-
-                if ($value === NULL) {
-                    continue;
-                }
-
-                if ($name === 'password' || $name === 'hash_password') {
-                    /* skip password attributes */
-                    continue;
-                }
-
-                $value = (string)$value;
-
-                if (!array_key_exists($name, $attributes)) {
-                    $attributes[$name] = array();
-                }
-
-                if (in_array($value, $attributes[$name], TRUE)) {
-                    /* Value already exists in attribute. */
-                    continue;
-                }
-
-                $attributes[$name][] = $value;
-            }
-        }
-
-        return $attributes;
+        return $data;
     }
 
 }

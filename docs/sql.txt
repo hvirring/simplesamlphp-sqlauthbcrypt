@@ -30,11 +30,12 @@ Examples
 
 Example - MySQL server:
 
-    'bcrypt-example' => [
+    'sha256-bcrypt' => [
       'sqlauthbcrypt:SQL',
       'dsn' => 'mysql:host=db.example.org;dbname=simplesaml',
       'username' => 'db_user',
       'password' => 'db_user_password',
+      'old_hash' => '256',
       'query' => 'SELECT username, email AS mail FROM users WHERE username = :username AND password = :password',
     ],
 
@@ -46,11 +47,9 @@ CREATE TABLE `users` (
   `username` varchar(45) NOT NULL,
   `email` varchar(45) NOT NULL,
   `password` varchar(200) NOT NULL,
-  `hash_password` varchar(200) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_UNIQUE` (`email`),
-  UNIQUE KEY `password_UNIQUE` (`password`),
-  UNIQUE KEY `hash_password_UNIQUE` (`hash_password`)
+  UNIQUE KEY `username_UNIQUE` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8
