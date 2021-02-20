@@ -30,6 +30,7 @@ Examples
 
 Example - MySQL server:
 
+```php
     'sha256-bcrypt' => [
       'sqlauthbcrypt:SQL',
       'dsn' => 'mysql:host=db.example.org;dbname=simplesaml',
@@ -38,6 +39,7 @@ Example - MySQL server:
       'old_hash' => '256',
       'query' => 'SELECT username, email AS mail FROM users WHERE username = :username AND password = :password',
     ],
+```
 
 Suggested users table schema
 
