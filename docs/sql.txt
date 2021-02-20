@@ -3,7 +3,7 @@ sqlauthBcrypt:SQL
 
 This is an authentication module for [SimpleSAMLphp](http://simplesamlphp.org) to authenticate a user against a SQL database table.
 
-It assumes password hashes and salts are calculated using [bcrypt](http://bcrypt.sourceforge.net/).
+In this version, we use builtin PHP `password_hash` (and its partner `passsword_verify`) with bcrypt and sha256. In case bcrypt password does not exist and sha256 password is valid then the module will convert the sha256 into bcrypt one.
 
 The implementation is based heavily on the SimpleSAMLphp module [sqlauth:SQL](http://simplesamlphp.org/docs/1.7/sqlauth:sql).
 
@@ -24,24 +24,33 @@ Options
 `query`
 :   The SQL query which should be used to retrieve the user. The parameters :username and :password are available. If the username/password is incorrect, the query should return no rows. The name of the columns in resultset will be used as attribute names. If the query returns multiple rows, they will be merged into the attributes. Duplicate values and NULL values will be removed.
 
-`pepper`
-:   The pepper string appended to passwords before generating the hash. If you are not using a pepper, set this to the empty string ('').
-
-`hash_column`
-:   The column storing password hashes.
-
 
 Examples
 --------
 
 Example - MySQL server:
 
-    'bcrypt-example' => array(
+    'bcrypt-example' => [
       'sqlauthbcrypt:SQL',
-      'dsn' => 'mysql:host=sql.example.org;dbname=simplesaml',
-      'username' => 'userdb',
-      'password' => 'secretpassword',
-      'hash_column' => 'password_hash',
-      'query' => 'SELECT username AS uid, name AS cn, email AS mail, password_hash FROM users WHERE username = :username',
-      'pepper' => '0474f00f7823ade7d10d6797b4ceb591672c3440d92537309cedfc383a98209daf6755c043deb92936797cf74859e6924d0b395a0309950be364928188c7cf0f',
-    ),
+      'dsn' => 'mysql:host=db.example.org;dbname=simplesaml',
+      'username' => 'db_user',
+      'password' => 'db_user_password',
+      'query' => 'SELECT username, email AS mail FROM users WHERE username = :username AND password = :password',
+    ],
+
+Suggested users table schema
+
+```sql
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(45) NOT NULL,
+  `email` varchar(45) NOT NULL,
+  `password` varchar(200) NOT NULL,
+  `hash_password` varchar(200) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email_UNIQUE` (`email`),
+  UNIQUE KEY `password_UNIQUE` (`password`),
+  UNIQUE KEY `hash_password_UNIQUE` (`hash_password`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8
