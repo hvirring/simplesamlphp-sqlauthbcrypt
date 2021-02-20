@@ -145,7 +145,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
          */
         if (isNotBcryptPassword($accountData[0]['password']) &&
             hash($this->oldHash, $password) === $accountData[0]['password']) {
-            $this->convertToBcryptPassword($password, $id);
+            $this->convertToBcryptPassword($password, $id, $db);
         }
 
         // re-read account from db
@@ -168,7 +168,7 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
         return $attributes;
     }
 
-    private function convertToBcryptPassword($plainTextPassword, $id) {
+    private function convertToBcryptPassword($plainTextPassword, $id, $db) {
         $bcryptPassword = password_hash($plainTextPassword, PASSWORD_BCRYPT);
         try {
             $query = "UPDATE users SET password = :bcrypt_password WHERE id = :id";
@@ -254,6 +254,44 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
         }
 
         return $data;
+    }
+
+    /**
+     * [isVulnerablePassword verifies password strength with cracklib-check and pwscore]
+     * @param  [string]  $pw    [raw password]
+     * @param  boolean $score   [get score from pwscore]
+     * @return boolean          [false is OK]
+     */
+    private function isVulnerablePassword($pw, $score = false) {
+        $CRACKLIB = "/path/to/cracklib-check";
+        $PWSCORE = "/path/to/pwscore";
+
+        setlocale(LC_ALL, 'en_US.utf-8');
+
+        $out = [];
+        $ret = null;
+        $command = "echo " . escapeshellarg($pw) . " | {$CRACKLIB}";
+        exec($command, $out, $ret);
+        if (($ret == 0) && preg_match("/: ([^:]+)$/", $out[0], $regs)) {
+            list(, $msg) = $regs;
+            switch($msg) {
+                case "OK":
+                    if ($score) {
+                        $command = "echo " . escapeshellarg($pw) . " | {$PWSCORE}";
+                        exec($command, $out, $ret);
+                        if (($ret == 0) && is_numeric($out[1])) {
+                            return (int) $out[1];
+                        }
+                        return false;
+                    }
+                    break;
+                default:
+                    $msg = str_replace("dictionary word", "common word, name or pattern", $msg);
+                    return $msg;
+            }
+        }
+
+        return false;
     }
 
 }

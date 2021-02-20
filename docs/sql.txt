@@ -17,9 +17,11 @@ Options
 `username`
 :   The username which should be used when connecting to the database server.
 
-
 `password`
 :   The password which should be used when connecting to the database server. If you are running this locally for development and you are using an empty password, set this to the empty string ('').
+
+`old_hash`
+:   The default non-bcrypt hash function (typically sha256).
 
 `query`
 :   The SQL query which should be used to retrieve the user. The parameters :username and :password are available. If the username/password is incorrect, the query should return no rows. The name of the columns in resultset will be used as attribute names. If the query returns multiple rows, they will be merged into the attributes. Duplicate values and NULL values will be removed.
