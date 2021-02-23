@@ -136,31 +136,22 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
 
         $db = $this->connect();
 
-        $accountData = $this->getAccountFromDb($db);
-
+        $accountData = $this->getAccountFromDb($db, $username);
         /**
          * if password in db is not bcrypt (does NOT starts with $2y$)
          * AND user provided password is valid THEN
          * UPDATE the db's password to bcrypt.
          */
-        if (isNotBcryptPassword($accountData[0]['password']) &&
+        if ($this->isNotBcryptPassword($accountData[0]['password']) &&
             hash($this->oldHash, $password) === $accountData[0]['password']) {
-            $this->convertToBcryptPassword($password, $id, $db);
+            $this->convertToBcryptPassword($password, $accountData[0]['id'], $db);
+            SimpleSAML_Logger::info(">>> Converted to bcrypt !");
         }
 
-        // re-read account from db
-        $accountData = $this->getAccountFromDb($db);
-        /* Validate stored password hash (must be in first row of resultset) */
-        $dbBcryptPassword = $accountData[0]['password'];
+        // Authenticate with bcrypt password
+        $accountData = $this->authenticateWithBcrypt($db, $username, $password);
 
-        if (! password_verify($password, $dbBcryptPassword)) {
-         /* Invalid password */
-            SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
-                 ': Hash does not match. Wrong password or sqlauthBcrypt is misconfigured.');
-            throw new SimpleSAML_Error_Error('WRONGUSERPASS');
-        }
-
-        $this->extractAndBuildAttributes($accountData);
+        $attributes = $this->extractAndBuildAttributes($accountData);
 
         SimpleSAML_Logger::info('sqlauthBcrypt:' . $this->authId .
             ': Attributes: ' . implode(',', array_keys($attributes)));
@@ -221,16 +212,17 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
         return substr($password, 0, 4) !== "$2y$";
     }
 
-    private function getAccountFromDb($dbConnection) {
+    private function getAccountFromDb($dbConnection, $username) {
+        $internalQuery = "SELECT id, username, email, password FROM users WHERE username = :username";
         try {
-            $sth = $dbConnection->prepare($this->query);
+            $sth = $dbConnection->prepare($internalQuery);
         } catch (PDOException $e) {
             throw new Exception('sqlauthBcrypt:' . $this->authId .
                 ': - Failed to prepare query: ' . $e->getMessage());
         }
 
         try {
-            $res = $sth->execute(array('username' => $username));
+            $res = $sth->execute(['username' => $username]);
         } catch (PDOException $e) {
             throw new Exception('sqlauthBcrypt:' . $this->authId .
                 ': - Failed to execute query: ' . $e->getMessage());
@@ -250,6 +242,49 @@ class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase
             /* No rows returned - invalid username */
             SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
                 ': No rows in result set. Wrong username or sqlauthBcrypt is misconfigured.');
+            throw new SimpleSAML_Error_Error('WRONGUSERPASS');
+        }
+
+        return $data;
+    }
+
+    private function authenticateWithBcrypt($dbConnection, $username, $password) {
+        $internalQuery = "SELECT username, email, password FROM users WHERE username = :username";
+        try {
+            $sth = $dbConnection->prepare($internalQuery);
+        } catch (PDOException $e) {
+            throw new Exception('sqlauthBcrypt:' . $this->authId .
+                ': - Failed to prepare query: ' . $e->getMessage());
+        }
+
+        try {
+            $res = $sth->execute(['username' => $username]);
+        } catch (PDOException $e) {
+            throw new Exception('sqlauthBcrypt:' . $this->authId .
+                ': - Failed to execute query: ' . $e->getMessage());
+        }
+
+        try {
+            $data = $sth->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new Exception('sqlauth:' . $this->authId .
+                ': - Failed to fetch result set: ' . $e->getMessage());
+        }
+
+        SimpleSAML_Logger::info('sqlauthBcrypt:' . $this->authId .
+            ': Got ' . count($data) . ' rows from database');
+
+        if (count($data) === 0) {
+            /* No rows returned - invalid username */
+            SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
+                ': No rows in result set. Wrong username or sqlauthBcrypt is misconfigured.');
+            throw new SimpleSAML_Error_Error('WRONGUSERPASS');
+        }
+
+        if (! password_verify($password, $data[0]['password'])) {
+         /* Invalid password */
+            SimpleSAML_Logger::error('sqlauthBcrypt:' . $this->authId .
+                 ': Hash does not match. Wrong password or sqlauthBcrypt is misconfigured.');
             throw new SimpleSAML_Error_Error('WRONGUSERPASS');
         }
 
