@@ -12,7 +12,7 @@
  * @package simpleSAMLphp
  * @version $Id$
  */
-class sspmod_sqlauthBcrypt_Auth_Source_SQL extends sspmod_core_Auth_UserPassBase {
+class sspmod_sqlauthbcrypt_Auth_Source_SQL extends SimpleSAML\Module\core\Auth\UserPassBase {
 
 
 	/**
