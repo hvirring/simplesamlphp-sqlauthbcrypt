@@ -1,22 +1,44 @@
-sqlauthBcrypt:SQL
-=================
+# sqlauthBcrypt:SQL
 
 This is an authentication module for [SimpleSAMLphp](http://simplesamlphp.org) to authenticate a user against a SQL database table.
 
 It assumes password hashes and salts are calculated using [bcrypt](http://bcrypt.sourceforge.net/).
 
-The implementation is based heavily on the SimpleSAMLphp module [sqlauth:SQL](http://simplesamlphp.org/docs/1.7/sqlauth:sql).
+The implementation is based heavily on the SimpleSAMLphp module [sqlauth:SQL](https://github.com/simplesamlphp/simplesamlphp-module-sqlauth).
 
+## Installation
 
-Options
--------
+- Download the module to your SimpleSAMLphp modules directory
+- Configure the Authentication Source in config/authsources.php
+- Enable the module in your config.php under `module.enable`
+
+```php
+    'module.enable' => [
+        'sqlauthbcrypt' => true
+    ],
+```
+
+## Usage
+
+In authsource.php:
+
+```php
+    'bcrypt-example' => array(
+      'sqlauthbcrypt:SQL',
+      'dsn' => 'mysql:host=sql.example.org;dbname=simplesaml',
+      'username' => 'userdb',
+      'password' => 'secretpassword',
+      'hash_column' => 'password_hash',
+      'query' => 'SELECT username AS uid, name AS cn, email AS mail, password_hash FROM users WHERE username = :username',
+      'pepper' => '0474f00f7823ade',
+    ),
+```
 
 `dsn`
 :   The DSN which should be used to connect to the database server. Check the various database drivers in the [PHP documentation](http://php.net/manual/en/pdo.drivers.php) for a description of the various DSN formats.
 
 `username`
 :   The username which should be used when connecting to the database server.
-
 
 `password`
 :   The password which should be used when connecting to the database server. If you are running this locally for development and you are using an empty password, set this to the empty string ('').
@@ -30,18 +52,11 @@ Options
 `hash_column`
 :   The column storing password hashes.
 
+## Contributing
 
-Examples
---------
+Pull requests are welcome. For major changes, please open an issue first
+to discuss what you would like to change.
 
-Example - MySQL server:
+## License
 
-    'bcrypt-example' => array(
-      'sqlauthbcrypt:SQL',
-      'dsn' => 'mysql:host=sql.example.org;dbname=simplesaml',
-      'username' => 'userdb',
-      'password' => 'secretpassword',
-      'hash_column' => 'password_hash',
-      'query' => 'SELECT username AS uid, name AS cn, email AS mail, password_hash FROM users WHERE username = :username',
-      'pepper' => '0474f00f7823ade7d10d6797b4ceb591672c3440d92537309cedfc383a98209daf6755c043deb92936797cf74859e6924d0b395a0309950be364928188c7cf0f',
-    ),
+[MIT](https://choosealicense.com/licenses/mit/)
