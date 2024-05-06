@@ -168,7 +168,7 @@ class SQL extends \SimpleSAML\Module\core\Auth\UserPassBase
 		}
 
 		try {
-			$sth->execute(['username' => $username, 'password' => $password]);
+			$sth->execute(['username' => $username]);
 		} catch (PDOException $e) {
 			throw new Exception('sqlauthBcrypt:' . $this->authId .
 				': - Failed to execute query: ' . $e->getMessage());
